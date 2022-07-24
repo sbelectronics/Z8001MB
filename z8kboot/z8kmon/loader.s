@@ -30,13 +30,13 @@ _start:
         nop
         nop
 
-        ldb     rl4,    #0x78           ! output something to the display board
+        ldb     rl4,    #0x87           ! output something to the display board
 		outb    #DIS12,  rl4
-        ldb     rl4,    #0x56
+        ldb     rl4,    #0x65
 		outb    #DIS34,  rl4
-        ldb     rl4,    #0x34
+        ldb     rl4,    #0x43
 		outb    #DIS56,  rl4
-        ldb     rl4,    #0x12
+        ldb     rl4,    #0x21
 		outb    #DIS78,  rl4
 
 		! should the following addrs have the high bit set? 4sun5bu makes me think yes,
@@ -47,13 +47,13 @@ _start:
         ld      r3,     #0x7E00         ! Transfer 32,256 words
         ldir    @rr4,   @rr6, r3
 
-        ldb     rl4,    #0x21           ! reverse what we wrote to the display board
+        ldb     rl4,    #0x12           ! reverse what we wrote to the display board
 		outb    #DIS12,  rl4
-        ldb     rl4,    #0x43
+        ldb     rl4,    #0x34
 		outb    #DIS34,  rl4
         ldb     rl4,    #0x56
 		outb    #DIS56,  rl4
-        ldb     rl4,    #0x87
+        ldb     rl4,    #0x78
 		outb    #DIS78,  rl4				
 
 		jp       0x80000008             ! Jump to address 00:0008. high bit indicates long addr.

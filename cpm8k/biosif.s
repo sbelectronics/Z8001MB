@@ -100,7 +100,8 @@ kludge:
 	lda	r4, bootmsg
 	call	puts
 
-	call	disk_init	! set up disk drive
+    ! TODO: smbaker: put this back when add CF support back in
+	! call	disk_init	! set up disk drive
 
 	call	biosinit	! set up C part of Bios
 	jp	ccp		! Turn control over to command processor
@@ -123,5 +124,5 @@ _wboot:
 !------------------------------------------------------------------------------
 	sect	.rodata
 bootmsg:
-	.asciz	"\r\nCP/M-8000 BIOS ver.0.11" 
+	.asciz	"\r\nCP/M-8000 BIOS ver.0.11.smbaker1" 
 

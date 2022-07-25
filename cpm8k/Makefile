@@ -8,7 +8,7 @@ OBJCOPY = z8k-coff-objcopy
 
 objs = biosboot.o biosif.o biostrap.o biosmem.o\
 	bios.o bioscall1.o bioscall2.o bioscall3.o bioscall4.o\
-	z8530.o diskio.o put.o\
+	z8530.o flashio.o put.o\
 
 .PHONY: all
 all: cpm8k.bin
@@ -20,7 +20,7 @@ cpm8k.bin: $(objs) biosdef.s cpmsys.o libcpm.a cpmsys.x
 
 .s.o:
 	#$(AS) -z8002 -o $@ $< 
-	$(AS) -o $@ $< 
+	$(AS) -o $@ -a=$<.lst $< 
 
 .PHONY: dskimg
 dskimg:
@@ -37,6 +37,10 @@ dskimg:
 	dd if=diskc.img of=disk.img count=16384 bs=512 seek=32768 conv=notrunc
 	dd if=diskd.img of=disk.img count=16384 bs=512 seek=49152 conv=notrunc
 
+.PHONY: clean-code
+clean-code:
+	$(RM) -f cpm8k cpm8k.bin cpm8k.hex $(objs)
+
 .PHONY: clean
-clean:
-	$(RM) -f cpm8k cpm8k.bin cpm8k.hex $(objs) *.img
+clean: clean-code
+	$(RM) -f *.img

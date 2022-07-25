@@ -79,10 +79,11 @@ func13:
 	pushl	@r15, rr2	! read the sector into the buffer
 	call	flush
 	popl	rr2, @r15
-	ldl	secbLBA, rr2
-	lda	r4, secbuf
-	call	diskrd
-	ldb	secbvalid, #1
+	ldl	    secbLBA, rr2
+	lda	    r4, secbuf
+	! TODO: smbaker: we could be smarter and not double-buffer flash
+	call	flashrd     ! TODO: smbaker: call diskrd as appropriate
+	ldb	    secbvalid, #1
 2:
 	ld	r1, setsec
 	and	r1, #0x0003
@@ -113,10 +114,10 @@ func14:
 	pushl	@r15, rr2	! read the sector into the buffer
 	call	flush
 	popl	rr2, @r15
-	ldl	secbLBA, rr2
-	lda	r4, secbuf
-	call	diskrd
-	ldb	secbvalid, #1
+	ldl	    secbLBA, rr2
+	lda	    r4, secbuf
+	call	flashrd     ! TODO: smbaker: call diskrd as appropriate
+	ldb	    secbvalid, #1
 2:
 	ld	r1, setsec
 	and	r1, #0x0003
@@ -173,7 +174,7 @@ flush:
 	ret	z		! not valid
 	ldl	rr2, secbLBA
 	lda	r4, secbuf
-	call	diskwr
+	call	flashwr     ! TODO: smbaker: call diskrd as appropriate
 	clrb	secbdirty
 	clrb	secbvalid
 	ret

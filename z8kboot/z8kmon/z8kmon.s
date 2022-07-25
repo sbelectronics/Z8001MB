@@ -69,6 +69,7 @@ lp3:
 	call	icmnd_usage
 	call	ocmnd_usage
 	call	zcmnd_usage
+	call    bcmnd_usage
 	jr	loop
 cmnderr:	
 	lda	rr4, errmsg
@@ -96,10 +97,12 @@ cmnd_tbl:
 	.long	ior_cmnd
 	.byte	'O', ' '
 	.long	iow_cmnd
+	.byte   'B', ' '
+	.long   bootflash_cmnd
 tbl_end:
 
 bootmsg:
-	.asciz	"\033[2J\033[0;0HZ8001 Machine Code Monitor Ver.0.2.0\r\n"
+	.asciz	"\033[2J\033[0;0HZ8001 Machine Code Monitor Ver.0.3.0\r\nModified by Scott Baker (smbaker@smbaker.com) for Scott's Z-8000 Computer\r\nPress 'B' to boot or 'H' for help\r\n"
 errmsg:
 	.asciz	"??? "
 

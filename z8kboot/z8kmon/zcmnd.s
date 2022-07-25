@@ -57,5 +57,5 @@ errmsg:
 	.string	"Boot error\r\n\0"
 
 usage:
-	.asciz	"Z boot\t: z (no options)\r\n"
+	.asciz	"CF boot\t: z (no options)\r\n"
 

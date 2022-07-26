@@ -10,7 +10,11 @@
 ! ******************************************************************************
 !	if ID_SPLIT = 1, I and D space split supported		
 ! ******************************************************************************	
+    .equ PLATFORM_SMBAKER, 1
 	.equ ID_SPLIT, 1
+	.equ ENABLE_ROMDISK, 1
+	.equ ENABLE_RAMDISK, 1
+	.equ ENABLE_FLOPPY, 0
 
 ! ******************************************************************************
 ! *
@@ -128,9 +132,29 @@
 !------------------------------------------------------------------------------
 !  Disk parameter definitions
 !
+	.equ	MAXDSK, ENABLE_ROMDISK + ENABLE_RAMDISK + ENABLE_FLOPPY + 4  ! number of disks
 
-	.equ	MAXDSK, 4
-	.equ	SECSZ, 128
-	.equ	PSECSZ, 512
+    .if ENABLE_ROMDISK == 1
+	.equ    ROMDISK_ID, 0                                                ! disk number of first romdisk
+	.else
+	.equ    ROMDISK_ID, 0xFF
+	.endif
+
+    .if ENABLE_RAMDISK == 1
+	.equ    RAMDISK_ID, ENABLE_ROMDISK                                   ! disk number of first ramdisk
+	.else
+	.equ    RAMDISK_ID, 0xFF	
+	.endif
+
+    .if ENABLE_FLOPPY == 1
+	.equ    FLOPDISK_ID, ENABLE_ROMDISK + ENABLE_RAMDISK                 ! disk number of first floppy
+	.else
+	.equ    FLOPDISK_ID, 0xFF	
+	.endif	
+
+	.equ    FIRSTIDE, ENABLE_ROMDISK + ENABLE_RAMDISK + ENABLE_FLOPPY    ! disk number of the first IDE disk
+
+	.equ	SECSZ, 128                                                   ! sector size
+	.equ	PSECSZ, 512                                                  ! for fetching blocks to/from IDE
 
 

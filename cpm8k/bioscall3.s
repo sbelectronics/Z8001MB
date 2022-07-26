@@ -10,6 +10,7 @@
 	.global	func8, func9, func10, func11, func12
 	.global	func13, func14, func16, func21, flush
 	.global	secbLBA, secbvalid, secbdirty
+	.global setdma, settrk, setsec                  ! for flashio.s
 
 	.include "biosdef.s"
 	
@@ -70,6 +71,12 @@ func12:
 !   Read Sector
 
 func13:
+    ld      r2, setdsk
+    cp      r2, #ROMDISK_ID
+	jp      eq, flashrd
+    cp      r2, #RAMDISK_ID
+	jp      eq, ramdiskrd
+
 	call	convLBA
 	cpl	rr2, secbLBA
 	jr	ne, 1f
@@ -81,8 +88,7 @@ func13:
 	popl	rr2, @r15
 	ldl	    secbLBA, rr2
 	lda	    r4, secbuf
-	! TODO: smbaker: we could be smarter and not double-buffer flash
-	call	flashrd     ! TODO: smbaker: call diskrd as appropriate
+	call	diskrd
 	ldb	    secbvalid, #1
 2:
 	ld	r1, setsec
@@ -104,6 +110,12 @@ func13:
 !   Write Sector
 
 func14:
+    ld      r2, setdsk
+    cp      r2, #ROMDISK_ID
+	jp      eq, flashwr
+    cp      r2, #RAMDISK_ID
+	jp      eq, ramdiskwr	
+
 	push 	@r15, r5
 	call	convLBA
 	cpl	rr2, secbLBA
@@ -116,7 +128,7 @@ func14:
 	popl	rr2, @r15
 	ldl	    secbLBA, rr2
 	lda	    r4, secbuf
-	call	flashrd     ! TODO: smbaker: call diskrd as appropriate
+	call	diskrd
 	ldb	    secbvalid, #1
 2:
 	ld	r1, setsec
@@ -168,13 +180,19 @@ func21:
 !   write back the secbuf to the disk
 
 flush:
+    ld      r2, setdsk
+    cp      r2, #ROMDISK_ID
+	jp      eq, flashflush
+    cp      r2, #RAMDISK_ID
+	jp      eq, ramdiskflush	
+
 	testb	secbdirty
 	ret	z		! not modified
 	testb	secbvalid
 	ret	z		! not valid
 	ldl	rr2, secbLBA
 	lda	r4, secbuf
-	call	flashwr     ! TODO: smbaker: call diskrd as appropriate
+	call	diskwr
 	clrb	secbdirty
 	clrb	secbvalid
 	ret
@@ -209,8 +227,8 @@ convLBA:
 !  Refer to "Grant's homebuilt electronics" Web page.
 !  http://http://searle.x10host.com/cpm/index.html 
 
-! Two reserved tracks, for boot disk 
-dpb0:
+! 512 tracks total. Two reserved tracks, for boot disk 
+dpb_ide:
 	.word	128	! SPT	: sectors per track
 	.byte	5	! BSH	: block shift
 	.byte	31	! BLM	: block mask
@@ -223,28 +241,77 @@ dpb0:
 	.word	0	! CKS	: checksum
 	.word	2	! OFF	: Reserved track
 
-! Without reserved track, not for boot disk 
-dpb1:
+! See http://www.gaby.de/cpm/manuals/archive/cpm22htm/ch6.htm
+! Each track is 16KB
+! TotalTracks=MemKB*1024/128.0/128.0
+! DataTracks=TotalTracks-2
+! DataBlocks=(DataTracks*128*128/4096.0)-1   # 4K blocks
+! DataBlocks=(DataTracks*128*128/2048.0)-1   # 2K blocks
+
+
+! Two reserved tracks, for boot disk, up to 960 KB, 60 tracks, 2K blocks
+! Note: stat misreported free space on this one
+dpb_romdisk_2k:
+	.word	128	! SPT	: sectors per track
+	.byte	4	! BSH	: block shift
+	.byte	15	! BLM	: block mask
+	.byte	0	! EXM	: extent mask
+	.byte	0	! Dummy
+	.word	463	! DSM	: bloks for data
+	.word	511	! DRM	: size of directory
+	.byte	0xff	! AL0	: directory allocation bitmap
+	.byte	0	! AL1
+	.word	0	! CKS	: checksum
+	.word	2	! OFF	: Reserved track
+
+! Two reserved tracks, for boot disk, up to 960 KB, 60 tracks, 4k blocks
+dpb_romdisk_4k:
 	.word	128	! SPT	: sectors per track
 	.byte	5	! BSH	: block shift
 	.byte	31	! BLM	: block mask
-	.byte	1	! EXM	: extent mask
+	.byte	3	! EXM	: extent mask
 	.byte	0	! Dummy
-	.word	2047	! DSM	: bloks for data
+	.word	231	! DSM	: bloks for data
 	.word	511	! DRM	: size of directory
 	.byte	0xf0	! AL0	: directory allocation bitmap
 	.byte	0	! AL1
 	.word	0	! CKS	: checksum
-	.word	0	! OFF	: Reserved track
+	.word	2	! OFF	: Reserved track	
+
+! Two reserved tracks, for boot disk, up to 704 KB, 44 tracks
+dpb_ramdisk:
+	.word	128	! SPT	: sectors per track
+	.byte	5	! BSH	: block shift
+	.byte	31	! BLM	: block mask
+	.byte	3	! EXM	: extent mask
+	.byte	0	! Dummy
+	.word	176	! DSM	: bloks for data
+	.word	511	! DRM	: size of directory
+	.byte	0xf0	! AL0	: directory allocation bitmap
+	.byte	0	! AL1
+	.word	0	! CKS	: checksum
+	.word	0	! OFF	: Reserved track	
 
 !------------------------------------------------------------------------------
 ! Disk parameter header table
 
 dphtbl:
-	.word	0, 0, 0, 0, dirbuf, dpb0, csv0, alv0
-	.word	0, 0, 0, 0, dirbuf, dpb0, csv1, alv1
-	.word	0, 0, 0, 0, dirbuf, dpb0, csv2, alv2
-	.word	0, 0, 0, 0, dirbuf, dpb0, csv3, alv3
+    .if ENABLE_ROMDISK == 1
+	.word	0, 0, 0, 0, dirbuf, dpb_romdisk_4k, csv0, alv0
+	.endif
+
+    .if ENABLE_RAMDISK == 1
+	.word	0, 0, 0, 0, dirbuf, dpb_ramdisk, csv1, alv1
+	.endif
+
+    .if ENABLE_FLOPPY == 1
+	! TODO ...
+	.endif	
+
+	.word	0, 0, 0, 0, dirbuf, dpb_ide, csv3, alv3
+	.word	0, 0, 0, 0, dirbuf, dpb_ide, csv4, alv4
+	.word	0, 0, 0, 0, dirbuf, dpb_ide, csv5, alv5
+	.word	0, 0, 0, 0, dirbuf, dpb_ide, csv6, alv6
 
 !------------------------------------------------------------------------------
 	sect .bss
@@ -260,6 +327,12 @@ csv2:
 	.space	128
 csv3:	
 	.space	128
+csv4:
+	.space	128
+csv5:
+	.space	128
+csv6:
+	.space	128	
 	
 alv0:
 	.space	257
@@ -269,6 +342,12 @@ alv2:
 	.space	257
 alv3:
 	.space	257
+alv4:
+	.space	257
+alv5:
+	.space	257
+alv6:
+	.space	257	
 
 dirbuf:
 	.space SECSZ

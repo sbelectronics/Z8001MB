@@ -103,6 +103,10 @@ kludge:
     ! TODO: smbaker: put this back when add CF support back in
 	! call	disk_init	! set up disk drive
 
+    .if ENABLE_RAMDISK == 1
+    call    ramdiskinit
+	.endif
+
 	call	biosinit	! set up C part of Bios
 	jp	ccp		! Turn control over to command processor
 

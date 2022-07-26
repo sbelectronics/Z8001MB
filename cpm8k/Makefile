@@ -8,7 +8,7 @@ OBJCOPY = z8k-coff-objcopy
 
 objs = biosboot.o biosif.o biostrap.o biosmem.o\
 	bios.o bioscall1.o bioscall2.o bioscall3.o bioscall4.o\
-	z8530.o flashio.o put.o\
+	z8530.o flashio.o diskio.o put.o\
 
 .PHONY: all
 all: cpm8k.bin
@@ -24,6 +24,8 @@ cpm8k.bin: $(objs) biosdef.s cpmsys.o libcpm.a cpmsys.x
 
 .PHONY: dskimg
 dskimg:
+	mkfs.cpm -f cpm8krom4k -b cpm8k.bin romdisk.img 
+	cpmcp -f cpm8krom4k romdisk.img romdisk/*.* 0:
 	mkfs.cpm -f cpm8k -b cpm8k.bin diska.img 
 	cpmcp -f cpm8k diska.img diska/*.* 0:
 	mkfs.cpm -f cpm8k diskb.img
@@ -36,6 +38,9 @@ dskimg:
 	dd if=diskb.img of=disk.img count=16384 bs=512 seek=16384 conv=notrunc
 	dd if=diskc.img of=disk.img count=16384 bs=512 seek=32768 conv=notrunc
 	dd if=diskd.img of=disk.img count=16384 bs=512 seek=49152 conv=notrunc
+
+listimg:
+	cpmls -f cpm8krom4k -D romdisk.img
 
 .PHONY: clean-code
 clean-code:

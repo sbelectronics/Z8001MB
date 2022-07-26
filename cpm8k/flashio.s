@@ -8,56 +8,40 @@
 
     .extern	_sysseg,
 	.extern puts, puthex16, putln
+	.extern setdma, settrk, setsec
 
-	.global	flashrd, flashwr
+	.global	flashrd, flashwr, flashflush
+	.global ramdiskrd, ramdiskwr, ramdiskflush, ramdiskinit
 
 	unsegm
 	sect	.text
+
+	! segments
+	.equ    FLASH_SEG, 0x40	
 	
+
 !------------------------------------------------------------------------------
 !  flashrd
 !    One sector read
 !    input  rr2 --- LBA
 !	    r4  --- Buffer Address
 !    destroys
-!       r2  --- segment is shifted left 8 bits
-!       r7  --- used as a counter
-!       r4  --- set to system segment
-!       r5  --- has the offset to the secbuf
+!       rr2
+!       rr4
 
 flashrd:
-    ! Diagnostics
-	!pushl   @r15, rr4   ! save r4/r5
-    !lda	    r4, rdlbamsg
-	!call	puts
-	!ld      r5, r2
-	!call    puthex16
-	!ld      r5, r3
-	!call    puthex16
-	!call    putln
-	!popl    rr4, @r15   ! restore r4/r5
-
-    slll    rr2, #9        ! Convert LBA addr to byte addr
- 
-    ! rr2 is now 000000ddd-dttttttt-ttsssss0-00000000
-
-    add     r2, #0x40      ! Flash is at segment 40
-    sll     r2, #8         ! Shift the segment into the uuper 8 bits
-	ld      r7, #0x200     ! Transfer 0x200 bytes = 512 bytes = 4 sectors
-	ld      r5, r4         ! Move destination offset to lower half of 32-bit reg
-	ld      r4, _sysseg    ! Destination is in the system segment
+    call     convOffset       ! get byte address in rr2
+	addb     rh2, #FLASH_SEG  ! add the base segment of the ramdisk
+	ldl	     rr4, setdma	  ! rr4 - DMA address	
+	ld    	 r7, #SECSZ
 
 	SEG
-	ldirb   @r4,  @r2, r7  ! Transfer from flash to _sysseg:buffer
+	ldirb	 @r4, @r2, r7	  ! data copy to the DMA
 	NONSEG
 
-	!pushl   @r15, rr4   ! save r4/r5
-    !lda	    r4, rdretmsg
-	!call	puts
-	!popl    rr4, @r15   ! restore r4/r5
-
+	clr	r7
 	ret
-	
+
 !------------------------------------------------------------------------------
 !  flashwr
 !    One sector write
@@ -65,13 +49,126 @@ flashrd:
 !	    r4 --- Buffer Address
 
 flashwr:
-    ! Figure out how to return an error... is this it?
-	ldb	rl0, #1
+    ld       r7, 1            ! return error
+	ret
+
+!------------------------------------------------------------------------------
+!  flashflush
+!    Does absolutely nothing...
+
+flashflush:
+    ld       r7, 0            ! nothing here to do...
+	ret
+
+!------------------------------------------------------------------------------
+!  ramdiskrd
+!    One sector read
+!    input
+!	    r4  --- Buffer Address
+!    destroys
+!       rr2
+!       rr4
+
+ramdiskrd:
+    call     convOffsetRamDisk ! get byte address in rr2
+
+    ! diagnostics
+    !pushl   @r15, rr4   ! save r4/r5
+    !lda     r4, rdrammsg
+	!call    puts
+	!ld      r5, r2
+	!call    puthex16
+	!ld      r5, r3
+	!call    puthex16
+	!call    putln
+	!popl    rr4, @r15   ! restore r4/r5
+
+	ldl	     rr4, setdma	  ! rr4 - DMA address	
+	ld    	 r7, #SECSZ
+
+	SEG
+	ldirb	 @r4, @r2, r7	  ! data copy to the DMA
+	NONSEG
+
+	clr	r7
+	ret
+
+!------------------------------------------------------------------------------
+!  ramdiskwr
+!    One sector write
+!    input
+!	    r4  --- Buffer Address
+!    destroys
+!       rr2
+!       rr4
+
+ramdiskwr:
+    call     convOffsetRamDisk ! get byte address in rr2
+	ldl	     rr4, setdma	  ! rr4 - DMA address	
+	ld    	 r7, #SECSZ
+
+	SEG
+	ldirb	 @r2, @r4, r7	  ! data copy from the DMA
+	NONSEG
+
+	clr	r7
+	ret
+
+ramdiskflush:
+    ld       r7, 0            ! nothing here to do...
+	ret
+
+ramdiskinit:
+    ldl     rr2, #0x04000000
+	ld      r7, 0
+	SEG
+nextbyte:
+    ldb      @r2, #0xE5
+	inc      r3, #1
+	djnz     r7, nextbyte
+	NONSEG
+	ret
+
+
+!------------------------------------------------------------------------------
+! convOffset
+!   Convert secter and track to LBA
+!	input	: (settrk), (setsec) and (setdsk)
+!	return	: rr2 - LBA
+!         0ttttttt-00000000-ttsssss0-00000000
+convOffset:
+	ld	    r3, settrk
+	sll	    r3, #7
+	ld	    r2, setsec
+	add	    r3, r2
+	ld      r2, #0
+    ! rr2 is now 00000000-00000000-tttttttt-tsssssss
+	slll    rr2, #7        ! Convert sector addr to byte addr
+	! rr2 is now 00000000-0ttttttt-ttssssss-s0000000
+	sll     r2, #8         ! Shift the segment into the uuper 8 bits
+	! rr2 is now 0ttttttt-00000000-ttsssss0-00000000
+	ret
+
+! The ramdisk needs to avoid using the pages that we're using for regions for CPM
+! programs. So, we call the same convOffset for the romdisk, and then we translate
+! the segment numbers to avoid the problematic ones.
+convOffsetRamDisk:
+    call    convOffset
+	srl     r2, #8
+	ldb     rl2, ramdisk_map(r2)
+	sll     r2, #8
 	ret
 
 !------------------------------------------------------------------------------
 	sect	.rodata
+ramdisk_map:
+    .byte   4, 5, 6, 7, 9, 10, 11, 12, 13, 14, 15   ! some holes because pages are in use
+
+rdrammsg:
+	.asciz	"Ram Read offset "	
 rdlbamsg:
-	.asciz	"Flash Read LBA "
+	.asciz	"Flash Read offset "
+rdaddrmsg:
+	.asciz	"Flash Read addr "	
 rdretmsg:
 	.asciz	"Flash Read return\r\n" 

@@ -41,10 +41,10 @@ bcmnd_usage:
 	sect .rodata
 
 bmsg1:
-	.string "Boot CP/M from Flash... \0"
+	.string "Boot CP/M from ROM DRive... \0"
 bmsg2:
     .string "Jumping to CP/M start\r\n\0"
 
 usage:
-	.asciz	"Flash Boot\t: b (no options)\r\n"
+	.asciz	"ROM Boot\t: b (no options)\r\n"
 

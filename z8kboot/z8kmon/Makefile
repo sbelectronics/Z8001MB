@@ -7,7 +7,8 @@ OBJCOPY = z8k-coff-objcopy
 .SUFFIXES: .o .s 
 
 objs = z8kmon.o cpu.o conio.o z8530.o ide.o\
-		dcmnd.o scmnd.o gcmnd.o lcmnd.o iocmnd.o zcmnd.o bcmnd.o
+		dcmnd.o scmnd.o gcmnd.o lcmnd.o iocmnd.o zcmnd.o bcmnd.o \
+		mcmnd.o tcmnd.o
 
 bootobjs = loader.o
 

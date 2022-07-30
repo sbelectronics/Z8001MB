@@ -201,6 +201,19 @@ map_prog:
 	ret     nz		! no: done
 	and     r6, #0x7F00	! extract seg bits
 
+    .if PLATFORM_SMBAKER == 1
+	! Z8000-smbaker:   segment 0x11 is the only one with
+	!	     separate I and D spaces, and
+	!	     the I space is accessed
+	!	     as segment 0x19's data.
+	.if  ID_SPLIT == 1 
+	cpb     rh6, #0x11
+	ret     ne
+	ldb     rh6, #0x19
+	.endif
+
+	.else
+
 	! Z8001MB:   segment 8 is the only one with
 	!	     separate I and D spaces, and
 	!	     the I space is accessed
@@ -209,5 +222,6 @@ map_prog:
 	cpb     rh6, #8
 	ret     ne
 	ldb     rh6, #10
+	.endif
 	.endif
 	ret

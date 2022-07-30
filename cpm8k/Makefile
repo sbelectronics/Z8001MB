@@ -26,6 +26,8 @@ cpm8k.bin: $(objs) biosdef.s cpmsys.o libcpm.a cpmsys.x
 dskimg:
 	mkfs.cpm -f cpm8krom4k -b cpm8k.bin romdisk.img 
 	cpmcp -f cpm8krom4k romdisk.img romdisk/*.* 0:
+	cpmcp -f cpm8krom4k romdisk.img games/*.z8k 0:
+	cpmcp -f cpm8krom4k romdisk.img games/*.c 0:
 	mkfs.cpm -f cpm8k -b cpm8k.bin diska.img 
 	cpmcp -f cpm8k diska.img diska/*.* 0:
 	mkfs.cpm -f cpm8k diskb.img
@@ -41,6 +43,16 @@ dskimg:
 
 listimg:
 	cpmls -f cpm8krom4k -D romdisk.img
+
+fixlf:
+	python ./fixlf.py < romdisk_fix/ctype.h > romdisk/ctype.h
+	python ./fixlf.py < romdisk_fix/errno.h > romdisk/errno.h
+	python ./fixlf.py < romdisk_fix/opt1.c > romdisk/opt1.c
+	python ./fixlf.py < romdisk_fix/opt.c > romdisk/opt.c
+	python ./fixlf.py < romdisk_fix/setjmp.h > romdisk/setjmp.h
+	python ./fixlf.py < romdisk_fix/signal.h > romdisk/signal.h
+	python ./fixlf.py < romdisk_fix/stdio.h > romdisk/stdio.h
+	python ./fixlf.py < romdisk_fix/xout.h > romdisk/xout.h
 
 .PHONY: clean-code
 clean-code:

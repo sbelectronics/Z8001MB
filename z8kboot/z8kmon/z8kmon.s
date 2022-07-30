@@ -70,6 +70,8 @@ lp3:
 	call	ocmnd_usage
 	call	zcmnd_usage
 	call    bcmnd_usage
+	call    memtest_usage
+	call    cputest_usage
 	jr	loop
 cmnderr:	
 	lda	rr4, errmsg
@@ -99,6 +101,10 @@ cmnd_tbl:
 	.long	iow_cmnd
 	.byte   'B', ' '
 	.long   bootflash_cmnd
+	.byte   'M', ' '
+	.long   memtest_cmnd
+	.byte   'T', ' '
+	.long   cputest_cmnd	
 tbl_end:
 
 bootmsg:

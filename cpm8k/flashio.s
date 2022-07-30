@@ -118,6 +118,7 @@ ramdiskflush:
     ld       r7, 0            ! nothing here to do...
 	ret
 
+! erase the ramdisk. Assumes all dir entries are in the first segment
 ramdiskinit:
     ldl     rr2, #0x04000000
 	ld      r7, 0
@@ -159,10 +160,14 @@ convOffsetRamDisk:
 	sll     r2, #8
 	ret
 
+! Funny note on the Ramdisk -- I couldn't figure out why ZCC kept failing, and
+! it turned out to be because I put the ramdisk's hole at block 8 instead of
+! block 9. 
+
 !------------------------------------------------------------------------------
 	sect	.rodata
 ramdisk_map:
-    .byte   4, 5, 6, 7, 9, 10, 11, 12, 13, 14, 15   ! some holes because pages are in use
+    .byte   4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15   ! hole at page 9 because that's our Data split-I/D seg
 
 rdrammsg:
 	.asciz	"Ram Read offset "	
